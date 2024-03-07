@@ -4,7 +4,7 @@
 auth/stmpConfig.go
 
 # Ignore auth/jwtSecret.go
-auth/jwtSecret.go
+auth/secret.go
 
 # Ignore dbHelper/secret.go
 dbHelper/secret.go
