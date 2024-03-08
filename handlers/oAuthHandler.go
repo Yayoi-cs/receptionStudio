@@ -7,6 +7,7 @@ import (
 	"golang.org/x/oauth2"
 	"net/http"
 	"receptionStudio/auth"
+	"receptionStudio/dbHelper"
 )
 
 func OAuthGoogleLogin(w http.ResponseWriter, r *http.Request) {
@@ -49,6 +50,14 @@ func OAuthCallBack(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Fprintf(w, "Can't generate JWT")
 		return
+	}
+	exists, err := dbHelper.CheckExistUserTable(email)
+	if err != nil {
+		fmt.Fprintf(w, "Database Error")
+		return
+	}
+	if !exists {
+		dbHelper.InsertIntoUserTable(email, "oauth")
 	}
 	fmt.Fprintf(w, jwtToken)
 }

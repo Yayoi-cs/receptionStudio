@@ -12,6 +12,68 @@ const (
 	DbName = "receptionStudio"
 )
 
+/*
+mysql> CREATE TABLE userTable (
+    -> id INT AUTO_INCREMENT PRIMARY KEY,
+    -> email VARCHAR(255) NOT NULL,
+    -> hash VARCHAR(255) NOT NULL,
+    -> availableProject VARCHAR(255) NULL
+    -> );
+*/
+
+func CheckExistUserTable(email string) (bool, error) {
+	DbUser, DbPassWord := DBconfig()
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(localhost:3306)/%s", DbUser, DbPassWord, DbName))
+	if err != nil {
+		log.Fatal(err)
+		return false, err
+	}
+	defer db.Close()
+	tx, err := db.Begin()
+	if err != nil {
+		log.Fatal(err)
+		return false, err
+	}
+	defer func() {
+		if err := recover(); err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+	var existingEmail string
+	err = tx.QueryRow("SELECT email FROM userTable WHERE email = ?", email).Scan(&existingEmail)
+	switch {
+	case err == sql.ErrNoRows:
+		return false, nil
+		break
+	case err != nil:
+		_ = tx.Rollback()
+		log.Fatal(err)
+		return false, err
+	default:
+		return true, nil
+	}
+	return false, nil
+}
+
+func InsertIntoUserTable(email, hash string) error {
+	DbUser, DbPassWord := DBconfig()
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(localhost:3306)/%s", DbUser, DbPassWord, DbName))
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	defer db.Close()
+
+	query := "INSERT INTO userTable (email,hash,availableProject) VALUES (?,?,?)"
+
+	_, err = db.Exec(query, email, hash, "")
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	return nil
+}
+
 func InsertIntoVerifyDB(email, hash, verifyCode string) error {
 	/*
 			mysql> CREATE TABLE verifyDB (

@@ -33,6 +33,14 @@ func CreateUserHandlerStep1(w http.ResponseWriter, r *http.Request) {
 	}
 	requestMail := requestBody.Mail
 	requestHash := requestBody.Hash
+	exists, err := dbHelper.CheckExistUserTable(requestMail)
+	if err != nil {
+		fmt.Fprintf(w, "Database Error")
+		return
+	}
+	if exists {
+		fmt.Fprintf(w, "Mail Address is already used.")
+	}
 	accessToken := auth.CreateUser(requestMail)
 	fmt.Fprintf(w, accessToken)
 	rand.Seed(time.Now().UnixNano())
