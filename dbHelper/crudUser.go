@@ -243,7 +243,10 @@ func AddAvailableProject(pn int, mail string) error {
 	}
 	var newAvailableProject string
 	if currentAvailableProject.Valid {
-		newAvailableProject = currentAvailableProject.String + "," + strconv.Itoa(pn)
+		if strings.Contains(currentAvailableProject.String, strconv.Itoa(pn)) {
+			return fmt.Errorf("PnIsAlreadyUsed")
+		}
+		newAvailableProject = currentAvailableProject.String + strconv.Itoa(pn) + ","
 	} else {
 		newAvailableProject = strconv.Itoa(pn) + ","
 	}

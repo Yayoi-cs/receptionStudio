@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"receptionStudio/auth"
 	"receptionStudio/dbHelper"
+	"strconv"
 )
 
 type requestBodyCreate struct {
@@ -50,7 +51,7 @@ func CreateProject(w http.ResponseWriter, r *http.Request) {
 type requestBodyUpdate struct {
 	ProjectNumber string
 	ProjectName   string
-	ProjectData   string
+	ProjectData   string //Base64EncodeData
 	RequestToken  string
 }
 
@@ -123,7 +124,7 @@ func DeleteProject(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	err = dbHelper.DeleteOldProject(requestNumber)
+	err = dbHelper.DeleteOldProject(mail, requestNumber)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -135,4 +136,93 @@ func DeleteProject(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	return
+}
+
+type requestBodyShare struct {
+	ShareMail     string
+	ProjectNumber string
+	RequestToken  string
+}
+
+func ShareProject(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	var requestBody requestBodyShare
+	err := json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	requestToken := requestBody.RequestToken
+	mail, err := auth.CheckJwt(requestToken)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	requestNumber := requestBody.ProjectNumber
+	valid, err := dbHelper.CheckAvailableProject(mail, requestNumber)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !valid {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	num, err := strconv.Atoi(requestNumber)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	requestShareMail := requestBody.ShareMail
+	err = dbHelper.AddAvailableProject(num, requestShareMail)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	return
+}
+
+type requestBodyRead struct {
+	ProjectNumber string
+	RequestToken  string
+}
+
+func ReadProject(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	var requestBody requestBodyRead
+	err := json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	requestToken := requestBody.RequestToken
+	mail, err := auth.CheckJwt(requestToken)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	requestNumber := requestBody.ProjectNumber
+	valid, err := dbHelper.CheckAvailableProject(mail, requestNumber)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if !valid {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	pd, err := dbHelper.ReadOldProject(requestNumber)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, pd)
 }

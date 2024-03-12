@@ -15,5 +15,7 @@ func StartServer() {
 	http.HandleFunc("/projectCreate", handlers.CreateProject)
 	http.HandleFunc("/projectUpdate", handlers.UpdateProject)
 	http.HandleFunc("/projectDelete", handlers.DeleteProject)
+	http.HandleFunc("/projectShare", handlers.ShareProject)
+	http.HandleFunc("/projectRead", handlers.ReadProject)
 	http.ListenAndServe(":8080", nil)
 }

@@ -31,9 +31,9 @@ func InsertNewProject(mail, pna string) error {
 	}
 	nextPn := pn + 1
 
-	query := "INSERT INTO projectDB (pnu,pna,pd) VALUES (?,?,?)"
+	query := "INSERT INTO projectDB (creater,pnu,pna,pd) VALUES (?,?,?,?)"
 
-	_, err = db.Exec(query, nextPn, pna, nil)
+	_, err = db.Exec(query, mail, nextPn, pna, nil)
 	if err != nil {
 		fmt.Println("ERROR WHILE INSERT", err)
 		return err
@@ -76,7 +76,7 @@ func nilOrString(data string) sql.NullString {
 	return nullStr
 }
 
-func DeleteOldProject(num string) error {
+func DeleteOldProject(mail, num string) error {
 
 	DbUser, DbPassWord := DBconfig()
 	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(localhost:3306)/%s", DbUser, DbPassWord, DbName))
@@ -86,13 +86,38 @@ func DeleteOldProject(num string) error {
 	}
 	defer db.Close()
 
-	query := "DELETE FROM projectDB WHERE pnu = ?"
+	query := "DELETE FROM projectDB WHERE pnu = ? AND creater = ?"
 
-	_, err = db.Exec(query, num)
+	_, err = db.Exec(query, num, mail)
 	if err != nil {
 		fmt.Println("ERROR WHILE INSERT", err)
 		return err
 	}
 
 	return nil
+}
+
+func ReadOldProject(num string) (string, error) {
+
+	DbUser, DbPassWord := DBconfig()
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(localhost:3306)/%s", DbUser, DbPassWord, DbName))
+	if err != nil {
+		log.Fatal(err)
+		return "", err
+	}
+	defer db.Close()
+
+	stmt, err := db.Prepare("select pd from projectDB where pnu = ?")
+	if err != nil {
+		fmt.Println("ERROR WHILE SELECT", err)
+		return "", err
+	}
+	defer stmt.Close()
+	var pd string
+	err = stmt.QueryRow(num).Scan(&pd)
+	if err != nil {
+		fmt.Println("ERROR WHILE SELECT", err)
+		return "", err
+	}
+	return pd, nil
 }
