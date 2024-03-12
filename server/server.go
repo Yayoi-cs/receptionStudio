@@ -11,5 +11,8 @@ func StartServer() {
 	http.HandleFunc("/AuthUser", handlers.CreateUserHandlerStep2)
 	http.HandleFunc("/Oauth", handlers.OAuthGoogleLogin)
 	http.HandleFunc("/OauthCallback", handlers.OAuthCallBack)
+	http.HandleFunc("/login", handlers.LoginWithMailHash)
+	http.HandleFunc("/projectCreate", handlers.CreateProject)
+
 	http.ListenAndServe(":8080", nil)
 }

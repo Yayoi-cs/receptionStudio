@@ -4,12 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strconv"
 
 	_ "github.com/go-sql-driver/mysql"
-)
-
-const (
-	DbName = "receptionStudio"
 )
 
 /*
@@ -55,7 +52,7 @@ func CheckExistUserTable(email string) (bool, error) {
 	return false, nil
 }
 
-func InsertIntoUserTable(email, hash string) error {
+func InsertIntoUserTable(email, hash string, isOauth bool) error {
 	DbUser, DbPassWord := DBconfig()
 	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(localhost:3306)/%s", DbUser, DbPassWord, DbName))
 	if err != nil {
@@ -64,9 +61,9 @@ func InsertIntoUserTable(email, hash string) error {
 	}
 	defer db.Close()
 
-	query := "INSERT INTO userTable (email,hash,availableProject) VALUES (?,?,?)"
+	query := "INSERT INTO userTable (email,hash,oauth,availableProject) VALUES (?,?,?,?)"
 
-	_, err = db.Exec(query, email, hash, "")
+	_, err = db.Exec(query, email, hash, isOauth, "")
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -167,6 +164,88 @@ func CheckVerifyCode(mail, verifyCode string) (bool, error) {
 	return count > 0, nil
 }
 
-func MoveFromVerifyCodeToUserDB() {
+func CheckMailWithHash(mail, hash string) (bool, error) {
+	DbUser, DbPassWord := DBconfig()
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(localhost:3306)/%s", DbUser, DbPassWord, DbName))
+	if err != nil {
+		log.Fatal(err)
+		return false, err
+	}
+	defer db.Close()
 
+	stmt, err := db.Prepare("SELECT COUNT(*) FROM userTable WHERE email = ? AND hash = ? AND oauth = 0")
+	if err != nil {
+		log.Fatal(err)
+		return false, err
+	}
+	defer stmt.Close()
+
+	var count int
+	err = stmt.QueryRow(mail, hash).Scan(&count)
+	if err != nil {
+		log.Fatal(err)
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func MoveFromVerifyDBToUserDB(mail string) error {
+	DbUser, DbPassWord := DBconfig()
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(localhost:3306)/%s", DbUser, DbPassWord, DbName))
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	defer db.Close()
+
+	stmt, err := db.Prepare("SELECT hash FROM verifyDB WHERE email = ?")
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	defer stmt.Close()
+	var hash string
+	err = stmt.QueryRow(mail).Scan(&hash)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	query := "DELETE FROM verifyDB WHERE email = ?"
+	_, err = db.Exec(query, mail)
+	if err != nil {
+		return err
+	}
+	InsertIntoUserTable(mail, hash, false)
+	return nil
+}
+
+func AddAvailableProject(pn int, mail string) error {
+	DbUser, DbPassWord := DBconfig()
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(localhost:3306)/%s", DbUser, DbPassWord, DbName))
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	defer db.Close()
+
+	stmt, err := db.Prepare("select availableProject from userTable where email = ?")
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	defer stmt.Close()
+	var currentAvailableProject string
+	err = stmt.QueryRow(mail).Scan(&currentAvailableProject)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	newAvailableProject := currentAvailableProject + "," + strconv.Itoa(pn)
+
+	query := "UPDATE userTable SET availableProject = ? where email = ?"
+	_, err = db.Exec(query, newAvailableProject, mail)
+	if err != nil {
+		return err
+	}
+	return nil
 }

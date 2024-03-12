@@ -18,46 +18,52 @@ func OAuthGoogleLogin(w http.ResponseWriter, r *http.Request) {
 func OAuthCallBack(w http.ResponseWriter, r *http.Request) {
 	state := r.FormValue("state")
 	if !auth.CheckStateString(state) {
-		fmt.Fprintf(w, "Invalid oauth state")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "SOMETHING WENT WRONG")
 		return
 	}
 	code := r.FormValue("code")
 	token, err := auth.CodeExchange(code)
 	if err != nil {
-		fmt.Fprintln(w, "Code exchange failed with error")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "SOMETHING WENT WRONG")
 		return
 	}
 	client := oauth2.NewClient(context.Background(), oauth2.StaticTokenSource(token))
 	response, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 	if err != nil {
-		fmt.Fprintf(w, "Failed to get user info")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "SOMETHING WENT WRONG")
 		return
 	}
 	defer response.Body.Close()
 
 	var userInfo map[string]interface{}
 	if err := json.NewDecoder(response.Body).Decode(&userInfo); err != nil {
-		fmt.Fprintf(w, "Failed to decode JSON")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "SOMETHING WENT WRONG")
 		return
 	}
-	fmt.Println(userInfo)
 	email, ok := userInfo["email"].(string)
 	if !ok {
-		fmt.Fprintf(w, "Email not found in response")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "SOMETHING WENT WRONG")
 		return
 	}
 	jwtToken, err := auth.GenerateJwtAuthGeneral(email)
 	if err != nil {
-		fmt.Fprintf(w, "Can't generate JWT")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "SOMETHING WENT WRONG")
 		return
 	}
 	exists, err := dbHelper.CheckExistUserTable(email)
 	if err != nil {
-		fmt.Fprintf(w, "Database Error")
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "SOMETHING WENT WRONG")
 		return
 	}
 	if !exists {
-		dbHelper.InsertIntoUserTable(email, "oauth")
+		dbHelper.InsertIntoUserTable(email, "", true)
 	}
 	fmt.Fprintf(w, jwtToken)
 }

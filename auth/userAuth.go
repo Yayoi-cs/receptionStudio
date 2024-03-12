@@ -58,7 +58,7 @@ func CheckJwt(tokenString string) (string, error) {
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
-		return "", fmt.Errorf("JWT is Valid")
+		return "", fmt.Errorf("JWT NOT VALID")
 	}
 	expDate, ok := claims["exp"].(string)
 	if !ok {
@@ -70,7 +70,7 @@ func CheckJwt(tokenString string) (string, error) {
 	} else {
 		now := time.Now()
 		if now.After(expTime) {
-			return "", fmt.Errorf("JWT is expired")
+			return "", fmt.Errorf("JwtIsExpired")
 		}
 	}
 	username, ok := claims["username"].(string)
