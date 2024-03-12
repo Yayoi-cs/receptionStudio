@@ -13,6 +13,7 @@ func StartServer() {
 	http.HandleFunc("/OauthCallback", handlers.OAuthCallBack)
 	http.HandleFunc("/login", handlers.LoginWithMailHash)
 	http.HandleFunc("/projectCreate", handlers.CreateProject)
-
+	http.HandleFunc("/projectUpdate", handlers.UpdateProject)
+	http.HandleFunc("/projectDelete", handlers.DeleteProject)
 	http.ListenAndServe(":8080", nil)
 }

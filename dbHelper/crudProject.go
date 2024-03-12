@@ -75,3 +75,24 @@ func nilOrString(data string) sql.NullString {
 	nullStr = sql.NullString{data, true}
 	return nullStr
 }
+
+func DeleteOldProject(num string) error {
+
+	DbUser, DbPassWord := DBconfig()
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(localhost:3306)/%s", DbUser, DbPassWord, DbName))
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	defer db.Close()
+
+	query := "DELETE FROM projectDB WHERE pnu = ?"
+
+	_, err = db.Exec(query, num)
+	if err != nil {
+		fmt.Println("ERROR WHILE INSERT", err)
+		return err
+	}
+
+	return nil
+}
