@@ -226,3 +226,29 @@ func ReadProject(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, pd)
 }
+
+type requestBodyInfo struct {
+	RequestToken string
+}
+
+func ProjectInfo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	var requestBody requestBodyInfo
+	err := json.NewDecoder(r.Body).Decode(&requestBody)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	requestToken := requestBody.RequestToken
+	mail, err := auth.CheckJwt(requestToken)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	infoJson, err := dbHelper.AvailableProjectInformation(mail)
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, string(infoJson))
+}

@@ -84,7 +84,7 @@ func CheckJwt(tokenString string) (string, error) {
 func SendConfirmEmail(address string, confirmCode string) {
 	from := "hirogoshawk3249@gmail.com"
 	subject := "Hello"
-	body := "Hello World!\nYour verify code :" + confirmCode
+	body := "Hello World!\nYour verify code :" + confirmCode + "\nAccess https://localhost:3000/home"
 	hostname, port, username, password := config()
 	auth := smtp.PlainAuth("", username, password, hostname)
 	msg := []byte(strings.ReplaceAll(fmt.Sprintf("To: %s\nSubject: %s\n\n%s", address, subject, body), "\n", "\r\n"))

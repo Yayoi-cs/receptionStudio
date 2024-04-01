@@ -2,8 +2,10 @@ package dbHelper
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -120,4 +122,76 @@ func ReadOldProject(num string) (string, error) {
 		return "", err
 	}
 	return pd, nil
+}
+func pnaFromPnu(num string) (string, error) {
+
+	DbUser, DbPassWord := DBconfig()
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(localhost:3306)/%s", DbUser, DbPassWord, DbName))
+	if err != nil {
+		log.Fatal(err)
+		return "", err
+	}
+	defer db.Close()
+
+	stmt, err := db.Prepare("select pna from projectDB where pnu = ?")
+	if err != nil {
+		fmt.Println("ERROR WHILE SELECT", err)
+		return "", err
+	}
+	defer stmt.Close()
+	var pna string
+	err = stmt.QueryRow(num).Scan(&pna)
+	if err != nil {
+		fmt.Println("ERROR WHILE SELECT", err)
+		return "", err
+	}
+	return pna, nil
+}
+
+type ProjectObject struct {
+	pnu string `json:"pnu"`
+	pna string `json:"pna"`
+}
+
+func AvailableProjectInformation(mail string) ([]byte, error) {
+	DbUser, DbPassWord := DBconfig()
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(localhost:3306)/%s", DbUser, DbPassWord, DbName))
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+	defer db.Close()
+
+	stmt, err := db.Prepare("select availableProject from userTable where email = ?")
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+	defer stmt.Close()
+	var currentAvailableProject sql.NullString
+	err = stmt.QueryRow(mail).Scan(&currentAvailableProject)
+	if err != nil {
+		log.Fatal(err)
+		return nil, err
+	}
+	if !currentAvailableProject.Valid {
+		return nil, nil
+	}
+	projectList := strings.Split(currentAvailableProject.String, ",")
+	var returnObjects []ProjectObject
+	for _, s := range projectList {
+		if s != "" {
+			pna, err := pnaFromPnu(s)
+			if err != nil {
+				return nil, err
+			}
+			returnObjects = append(returnObjects, ProjectObject{
+				pnu: s,
+				pna: pna,
+			})
+		}
+	}
+	jsonData, err := json.Marshal(returnObjects)
+
+	return jsonData, nil
 }

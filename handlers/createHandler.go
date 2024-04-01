@@ -1,7 +1,10 @@
 package handlers
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -12,8 +15,8 @@ import (
 )
 
 type RequestBodyCreateUserStep1 struct {
-	Mail string
-	Hash string
+	Email    string
+	Password string
 }
 
 func CreateUserHandlerStep1(w http.ResponseWriter, r *http.Request) {
@@ -33,12 +36,16 @@ func CreateUserHandlerStep1(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	requestMail := requestBody.Mail
-	requestHash := requestBody.Hash
+	requestMail := requestBody.Email
+	requestHash := requestBody.Password
 	if requestHash == "" || requestMail == "" {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	hash := sha256.New()
+	hash.Write([]byte(requestHash))
+	hashed := hash.Sum(nil)
+	requestHash = hex.EncodeToString(hashed)
 	exists, err := dbHelper.CheckExistUserTable(requestMail)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -46,7 +53,7 @@ func CreateUserHandlerStep1(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if exists {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusUnauthorized)
 		fmt.Fprintf(w, "EMAIL ALLREADY USED")
 	}
 	accessToken := auth.CreateUser(requestMail)
@@ -81,16 +88,18 @@ func CreateUserHandlerStep2(w http.ResponseWriter, r *http.Request) {
 	mail, err := auth.CheckJwt(requestToken)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Println("Error createHandler.go:90", err)
 		fmt.Fprintf(w, "SOMETHING WENT WRONG")
 		return
 	}
 	verify, err := dbHelper.CheckVerifyCode(mail, requestCode)
-	if err == fmt.Errorf("JwtIsExpired") {
+	if errors.Is(err, fmt.Errorf("JwtIsExpired")) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Println("Error createHandler.go:101", err)
 		fmt.Fprintf(w, "SOMETHING WENT WRONG")
 		return
 	}
@@ -99,6 +108,7 @@ func CreateUserHandlerStep2(w http.ResponseWriter, r *http.Request) {
 		returnJwt, err := auth.GenerateJwtAuthGeneral(mail)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Println("Error createHandler.go:110", err)
 			fmt.Fprintf(w, "SOMETHING WENT WRONG")
 			return
 		}

@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,12 +11,13 @@ import (
 )
 
 type requestLoginBody struct {
-	Email string
-	Hash  string
+	Email    string
+	Password string
 }
 
 func LoginWithMailHash(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	var requestBody requestLoginBody
@@ -25,7 +28,13 @@ func LoginWithMailHash(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	requestMail := requestBody.Email
-	requestHash := requestBody.Hash
+	requestHash := requestBody.Password
+	hash := sha256.New()
+	hash.Write([]byte(requestHash))
+	hashed := hash.Sum(nil)
+	requestHash = hex.EncodeToString(hashed)
+	fmt.Println("RequestMail :", requestMail)
+	fmt.Println("RequestHash :", requestHash)
 	check, err := dbHelper.CheckMailWithHash(requestMail, requestHash)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -33,7 +42,7 @@ func LoginWithMailHash(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !check {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	accessToken, err := auth.GenerateJwtAuthGeneral(requestMail)
