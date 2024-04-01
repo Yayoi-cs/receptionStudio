@@ -149,8 +149,8 @@ func pnaFromPnu(num string) (string, error) {
 }
 
 type ProjectObject struct {
-	pnu string `json:"pnu"`
-	pna string `json:"pna"`
+	Pnu string `json:"pnu"`
+	Pna string `json:"pna"`
 }
 
 func AvailableProjectInformation(mail string) ([]byte, error) {
@@ -186,12 +186,14 @@ func AvailableProjectInformation(mail string) ([]byte, error) {
 				return nil, err
 			}
 			returnObjects = append(returnObjects, ProjectObject{
-				pnu: s,
-				pna: pna,
+				Pnu: s,
+				Pna: pna,
 			})
 		}
 	}
 	jsonData, err := json.Marshal(returnObjects)
-
+	if err != nil {
+		return nil, err
+	}
 	return jsonData, nil
 }

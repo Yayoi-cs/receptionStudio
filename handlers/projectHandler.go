@@ -249,6 +249,10 @@ func ProjectInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	infoJson, err := dbHelper.AvailableProjectInformation(mail)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, string(infoJson))
 }
