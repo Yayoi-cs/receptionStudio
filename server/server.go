@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"receptionStudio/dbHelper"
 	"receptionStudio/handlers"
+	"receptionStudio/webSocket"
 )
 
 func enableCORS(next http.Handler) http.Handler {
@@ -38,6 +39,7 @@ func StartServer() {
 	http.HandleFunc("/projectShare", handlers.ShareProject)
 	http.HandleFunc("/projectRead", handlers.ReadProject)
 	http.Handle("/info", enableCORS(http.HandlerFunc(handlers.ProjectInfo)))
+	http.Handle("/websocket", enableCORS(http.HandlerFunc(webSocket.WsEndpoint)))
 	fmt.Println("Start Server at localhost:8080")
 	http.ListenAndServe(":8080", nil)
 }
