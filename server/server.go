@@ -40,6 +40,7 @@ func StartServer() {
 	http.HandleFunc("/projectRead", handlers.ReadProject)
 	http.Handle("/info", enableCORS(http.HandlerFunc(handlers.ProjectInfo)))
 	http.Handle("/websocket", enableCORS(http.HandlerFunc(webSocket.WsEndpoint)))
+	go webSocket.ListenToWsChan()
 	fmt.Println("Start Server at localhost:8080")
 	http.ListenAndServe(":8080", nil)
 }

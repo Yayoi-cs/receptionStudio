@@ -22,6 +22,8 @@ func WsEndpoint(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgradeConnection.Upgrade(w, r, nil)
 	if err != nil {
 		fmt.Println(err)
+		fmt.Println("Websocket Closed")
+		ws.Close()
 	}
 	fmt.Println("OK Client Connecting")
 	conn := WsConnection{ws}
@@ -30,6 +32,7 @@ func WsEndpoint(w http.ResponseWriter, r *http.Request) {
 		Message: "Hello World",
 	}
 	err = ws.WriteJSON(response)
+
 	go ListenForWs(&conn)
 
 }
@@ -38,15 +41,21 @@ func ListenForWs(conn *WsConnection) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("Error", fmt.Sprintf("%v", r))
+			conn.Close()
+			delete(clients, *conn)
+			fmt.Println("Connection Closed.")
 		}
 	}()
 	var payload WsPayload
 
 	for {
 		err := conn.ReadJSON(&payload)
-		if err != nil {
+		if err == nil {
+
 			payload.Conn = *conn
+			fmt.Println(payload.Message)
 			wsChan <- payload
+
 		}
 	}
 }
@@ -62,9 +71,10 @@ func ListenToWsChan() {
 
 func broadcastToAll(response WsJsonResponse) {
 	for client := range clients {
-		err := client.WriteJSON(&response.Message)
+		err := client.WriteJSON(&response)
 		if err != nil {
 			_ = client.Close()
+			fmt.Println("Connection Closed.")
 			delete(clients, client)
 		}
 	}
